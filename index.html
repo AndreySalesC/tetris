@@ -20,6 +20,11 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
+        let lines = 0;
+        let level = 1;
+        
+        let dropCounter = 0;
+        let dropInterval = 1000; // 1 segundo inicial
             overflow: hidden;
         }
 
@@ -84,11 +89,21 @@
         }
 
         .next-box canvas {
+        let lines = 0;
+        let level = 1;
+        
+        let dropCounter = 0;
+        let dropInterval = 1000; // 1 segundo inicial
             background-color: #0f0f1a;
             border: 2px solid rgba(255, 255, 255, 0.1);
             border-radius: 6px;
             margin-top: 5px;
         }
+        let lines = 0;
+        let level = 1;
+        
+        let dropCounter = 0;
+        let dropInterval = 1000; // 1 segundo inicial
 
         .btn {
             background: linear-gradient(135deg, #4e54c8, #8f94fb);
@@ -105,6 +120,11 @@
         }
 
         .btn:hover {
+        let lines = 0;
+        let level = 1;
+        
+        let dropCounter = 0;
+        let dropInterval = 1000; // 1 segundo inicial
             transform: translateY(-2px);
             box-shadow: 0 7px 20px rgba(78, 84, 200, 0.6);
             filter: brightness(1.1);
@@ -116,6 +136,11 @@
 
         .controls-hint {
             margin-top: 10px;
+        let lines = 0;
+        let level = 1;
+        
+        let dropCounter = 0;
+        let dropInterval = 1000; // 1 segundo inicial
             font-size: 0.8rem;
             color: #a0a5c0;
             line-height: 1.5;
@@ -129,6 +154,11 @@
             position: absolute;
             top: 0;
             left: 0;
+        let lines = 0;
+        let level = 1;
+        
+        let dropCounter = 0;
+        let dropInterval = 1000; // 1 segundo inicial
             width: 100%;
             height: 100%;
             background: rgba(15, 15, 26, 0.85);
@@ -149,6 +179,11 @@
             font-size: 2rem;
             color: #ff4a5a;
             margin-bottom: 15px;
+        let lines = 0;
+        let level = 1;
+        
+        let dropCounter = 0;
+        let dropInterval = 1000; // 1 segundo inicial
             text-shadow: 0 0 10px rgba(255, 74, 90, 0.5);
         }
     </style>
@@ -167,6 +202,11 @@
             </div>
         </div>
 
+        let lines = 0;
+        let level = 1;
+        
+        let dropCounter = 0;
+        let dropInterval = 1000; // 1 segundo inicial
         <div class="sidebar">
             <div class="info-box">
                 <h2>Pontuação</h2>
@@ -187,6 +227,11 @@
             
             <div class="controls-hint">
                 <strong>Controlos:</strong><br>
+        let lines = 0;
+        let level = 1;
+        
+        let dropCounter = 0;
+        let dropInterval = 1000; // 1 segundo inicial
                 ← / → : Mover lados<br>
                 ↑ : Rodar Peça<br>
                 ↓ : Cair rápido<br>
@@ -204,6 +249,11 @@
         const ROWS = 20;
         const COLS = 10;
         const BLOCK_SIZE = 30;
+        let lines = 0;
+        let level = 1;
+        
+        let dropCounter = 0;
+        let dropInterval = 1000; // 1 segundo inicial
 
         ctx.scale(1, 1);
 
@@ -219,6 +269,11 @@
             '#f00000'  // Z - Vermelho
         ];
 
+        let lines = 0;
+        let level = 1;
+        
+        let dropCounter = 0;
+        let dropInterval = 1000; // 1 segundo inicial
         // Matrizes das peças
         const SHAPES = [
             [],
@@ -247,7 +302,7 @@
         };
 
         let nextPiece = {
-            matrix: null,
+            matrix: null,0
             type: 0
         };
 
@@ -269,7 +324,7 @@
 
         function drawMatrix(matrix, offset, context) {
             matrix.forEach((row, y) => {
-                row.forEach((value, x) => {
+                row.forEach((value, x) => {0
                     if (value !== 0) {
                         context.fillStyle = COLORS[value];
                         context.fillRect(
