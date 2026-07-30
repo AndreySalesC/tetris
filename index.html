@@ -191,7 +191,9 @@
             context.fillRect(0, 0, canvas.width, canvas.height);
 
             drawMatrix(arena, {x: 0, y: 0});
-            drawMatrix(player.matrix, player.pos);
+            if (player.matrix) {
+                drawMatrix(player.matrix, player.pos);
+            }
         }
 
         function drawMatrix(matrix, offset) {
@@ -265,6 +267,7 @@
 
         // Lógica de Movimento
         function playerDrop() {
+            if (isPaused) return;
             player.pos.y++;
             if (collide(arena, player)) {
                 player.pos.y--;
@@ -277,6 +280,7 @@
         }
 
         function playerMove(dir) {
+            if (isPaused) return;
             player.pos.x += dir;
             if (collide(arena, player)) {
                 player.pos.x -= dir;
@@ -284,6 +288,7 @@
         }
 
         function playerRotate() {
+            if (isPaused) return;
             const pos = player.pos.x;
             let offset = 1;
             rotate(player.matrix, 1);
@@ -333,23 +338,42 @@
 
         function gameOver() {
             isPaused = true;
+            if (animFrameId) {
+                cancelAnimationFrame(animFrameId);
+                animFrameId = null;
+            }
             gameOverScreen.classList.remove('hidden');
             document.getElementById('final-score-display').innerText = `Pontuação Final: ${player.score}`;
         }
 
         function resetGame() {
-            arena.forEach(row => row.fill(0));
+            // Limpa completamente a matriz da arena
+            for (let y = 0; y < arena.length; ++y) {
+                arena[y].fill(0);
+            }
+            
             player.score = 0;
             updateScore();
             gameOverScreen.classList.add('hidden');
-            playerReset();
+            
+            // Cancela animação anterior para evitar aceleração
+            if (animFrameId) {
+                cancelAnimationFrame(animFrameId);
+                animFrameId = null;
+            }
+
+            dropCounter = 0;
+            lastTime = 0;
             isPaused = false;
+            
+            playerReset();
+            draw();
+            update();
         }
 
         function startGame() {
             startScreen.classList.add('hidden');
             resetGame();
-            update();
         }
 
         // Loop do Jogo
@@ -357,6 +381,7 @@
         let dropInterval = 1000;
         let lastTime = 0;
         let isPaused = true;
+        let animFrameId = null;
 
         function update(time = 0) {
             if (isPaused) return;
@@ -370,7 +395,7 @@
             }
 
             draw();
-            requestAnimationFrame(update);
+            animFrameId = requestAnimationFrame(update);
         }
 
         // Eventos de Teclado
@@ -388,10 +413,7 @@
             }
         });
 
-        // Inicializar com uma peça mas pausado
-        playerReset();
+        // Desenho inicial do tabuleiro vazio
         draw();
 
     </script>
-</body>
-</html>
