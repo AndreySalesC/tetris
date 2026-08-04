@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tetris Clássico</title>
+    <title>TRETIS Arcade</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -18,7 +18,11 @@
             background-color: #1e293b;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
             max-width: 100%;
-            max-height: 70vh;
+            max-height: 65vh;
+        }
+        #next-canvas {
+            border: 2px solid #334155;
+            background-color: #1e293b;
         }
         .controls-grid {
             display: grid;
@@ -37,25 +41,52 @@
             background: #475569;
             transform: scale(0.95);
         }
+        @keyframes cupShuffle {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0); }
+        }
+        .shuffling {
+            animation: cupShuffle 0.4s ease-in-out infinite alternate;
+        }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen p-4">
 
     <div class="w-full max-w-md flex flex-col gap-4">
-        <!-- Cabeçalho, Pontuação e Botão de Pausa -->
-        <div class="flex justify-between items-center">
+        <!-- Cabeçalho, Modos, Pontuação e Próxima Peça -->
+        <div class="flex justify-between items-start">
             <div>
-                <h1 class="text-3xl font-bold text-blue-400">TETRIS</h1>
-                <p class="text-slate-400 text-sm">Desafia os teus limites</p>
+                <h1 class="text-3xl font-black text-blue-400 tracking-wider">TRETIS</h1>
+                <p id="mode-label" class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Modo Clássico</p>
+                <div class="flex items-center gap-2">
+                    <!-- Botão de Seleção de Modos -->
+                    <button id="mode-btn" onclick="openModeMenu()" class="bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all flex items-center gap-1">
+                        <span>🎮</span>
+                        <span>Modos</span>
+                    </button>
+                    <button id="pause-btn" onclick="togglePause()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all flex items-center gap-1">
+                        <span id="pause-icon">⏸️</span>
+                    </button>
+                </div>
             </div>
-            <div class="flex items-center gap-4">
-                <button id="pause-btn" onclick="togglePause()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-1">
-                    <span id="pause-icon">⏸️</span>
-                    <span id="pause-text">Pausar</span>
-                </button>
+            
+            <!-- Painel Direito: Pontuação e Próxima Peça -->
+            <div class="flex flex-col items-end gap-2">
                 <div class="text-right">
-                    <div class="text-xs uppercase tracking-widest text-slate-500">Pontos</div>
-                    <div id="score" class="text-2xl font-mono font-bold">0</div>
+                    <div class="text-[10px] uppercase tracking-widest text-slate-500">Pontos</div>
+                    <div id="score" class="text-2xl font-mono font-bold leading-none">0</div>
+                </div>
+
+                <!-- Painel da Próxima Peça -->
+                <div class="flex flex-col items-end relative">
+                    <div class="text-[10px] uppercase tracking-widest text-slate-400 font-semibold mb-1">Próxima</div>
+                    <canvas id="next-canvas" width="80" height="80" class="rounded-lg"></canvas>
+                    
+                    <!-- Camada de Censura para o Modo Memória -->
+                    <div id="next-censored" class="hidden absolute bottom-0 left-0 right-0 h-[80px] bg-slate-800 border-2 border-slate-600 rounded-lg flex items-center justify-center text-slate-400 font-bold text-xl">
+                        ???
+                    </div>
                 </div>
             </div>
         </div>
@@ -65,7 +96,7 @@
             <canvas id="game-canvas"></canvas>
             
             <!-- Overlay de Game Over -->
-            <div id="game-over" class="hidden absolute inset-0 bg-slate-900/80 flex flex-col items-center justify-center text-center p-6 rounded">
+            <div id="game-over" class="hidden absolute inset-0 bg-slate-900/80 flex flex-col items-center justify-center text-center p-6 rounded z-10">
                 <h2 class="text-4xl font-black text-red-500 mb-2">FIM DE JOGO</h2>
                 <p id="final-score-display" class="mb-6">Pontuação Final: 0</p>
                 <button onclick="resetGame()" class="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-full font-bold transition-all">
@@ -74,18 +105,80 @@
             </div>
 
             <!-- Overlay de Pausa -->
-            <div id="pause-screen" class="hidden absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 rounded">
+            <div id="pause-screen" class="hidden absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 rounded z-10">
                 <h2 class="text-4xl font-black text-amber-400 mb-4">EM PAUSA</h2>
                 <button onclick="togglePause()" class="bg-emerald-600 hover:bg-emerald-500 px-6 py-3 rounded-full font-bold transition-all mb-3">
                     Continuar
+                </button>
+                <button onclick="openModeMenu()" class="bg-indigo-600 hover:bg-indigo-500 px-5 py-2 rounded-full font-medium text-sm transition-all text-white mb-2">
+                    Mudar de Modo
                 </button>
                 <button onclick="resetGame()" class="bg-slate-700 hover:bg-slate-600 px-5 py-2 rounded-full font-medium text-sm transition-all text-slate-300">
                     Reiniciar Jogo
                 </button>
             </div>
 
+            <!-- Desafio de Memória (Pergunta da Próxima Peça) -->
+            <div id="memory-quiz" class="hidden absolute inset-0 bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-4 rounded z-30">
+                <h3 class="text-lg font-bold text-cyan-400 mb-1">🧠 TESTE DE MEMÓRIA!</h3>
+                <p class="text-xs text-slate-300 mb-4 text-center">Qual era a próxima peça antes de ser censurada?</p>
+
+                <div id="quiz-options" class="grid grid-cols-3 gap-2 w-full max-w-xs mb-3">
+                    <!-- Opções geradas por JS -->
+                </div>
+            </div>
+
+            <!-- Mini-jogo Copo Maroto -->
+            <div id="shell-game" class="hidden absolute inset-0 bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-4 rounded z-30">
+                <h3 class="text-lg font-bold text-amber-400 mb-1">🥤 COPO MAROTO!</h3>
+                <p id="shell-instructions" class="text-xs text-slate-300 mb-6 text-center">Acompanha bem os copos. Onde está a bolinha?</p>
+
+                <div class="flex justify-center items-center gap-4 mb-6">
+                    <button onclick="pickCup(0)" class="cup-btn text-4xl p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 transition-all">🥤</button>
+                    <button onclick="pickCup(1)" class="cup-btn text-4xl p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 transition-all">🥤</button>
+                    <button onclick="pickCup(2)" class="cup-btn text-4xl p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 transition-all">🥤</button>
+                </div>
+                <div id="shell-result" class="text-xs font-bold h-4"></div>
+            </div>
+
+            <!-- Menu de Modos de Jogo -->
+            <div id="mode-menu" class="hidden absolute inset-0 bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-6 rounded z-20">
+                <h2 class="text-2xl font-bold text-blue-400 mb-1">SELECIONA O MODO</h2>
+                <p class="text-slate-400 text-xs mb-4 text-center">Escolhe o teu estilo de jogo no TRETIS</p>
+
+                <div class="w-full flex flex-col gap-2 max-w-xs">
+                    <!-- Opção Modo Clássico -->
+                    <button onclick="selectMode('classic')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 p-2.5 rounded-xl text-left transition-all hover:scale-105">
+                        <div class="font-bold text-emerald-400 text-sm">🟦 TRETIS Clássico</div>
+                        <div class="text-[11px] text-slate-400">A experiência tradicional com velocidade constante.</div>
+                    </button>
+
+                    <!-- Opção Modo Veloz -->
+                    <button onclick="selectMode('speed')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 p-2.5 rounded-xl text-left transition-all hover:scale-105">
+                        <div class="font-bold text-amber-400 text-sm">⚡ TRETIS Veloz (Speed)</div>
+                        <div class="text-[11px] text-slate-400">A velocidade aumenta à medida que fazes mais pontos!</div>
+                    </button>
+
+                    <!-- Opção Modo Invertido -->
+                    <button onclick="selectMode('inverted')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 p-2.5 rounded-xl text-left transition-all hover:scale-105">
+                        <div class="font-bold text-purple-400 text-sm">🔄 Modo Gravidade Invertida</div>
+                        <div class="text-[11px] text-slate-400">A peça especial 1x1 (🔀) inverte o sentido do tabuleiro!</div>
+                    </button>
+
+                    <!-- Opção Modo Memória e Atenção -->
+                    <button onclick="selectMode('memory')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 p-2.5 rounded-xl text-left transition-all hover:scale-105">
+                        <div class="font-bold text-cyan-400 text-sm">🧠 Memória e Atenção</div>
+                        <div class="text-[11px] text-slate-400">Perguntas surpresa de memória e o jogo do Copo Maroto!</div>
+                    </button>
+                </div>
+
+                <button onclick="closeModeMenu()" class="mt-4 text-slate-400 hover:text-white text-xs underline">
+                    Fechar
+                </button>
+            </div>
+
             <!-- Botão Start Inicial -->
-            <div id="start-screen" class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center">
+            <div id="start-screen" class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-10">
                 <button onclick="startGame()" class="bg-emerald-600 hover:bg-emerald-500 px-8 py-4 rounded-full font-bold text-xl shadow-lg transition-all transform hover:scale-105">
                     COMEÇAR JOGO
                 </button>
@@ -113,78 +206,80 @@
     <script>
         const canvas = document.getElementById('game-canvas');
         const context = canvas.getContext('2d');
+        const nextCanvas = document.getElementById('next-canvas');
+        const nextContext = nextCanvas.getContext('2d');
+
         const scoreElement = document.getElementById('score');
         const gameOverScreen = document.getElementById('game-over');
         const pauseScreen = document.getElementById('pause-screen');
         const startScreen = document.getElementById('start-screen');
-        const pauseText = document.getElementById('pause-text');
+        const modeMenu = document.getElementById('mode-menu');
+        const modeLabel = document.getElementById('mode-label');
         const pauseIcon = document.getElementById('pause-icon');
+        const nextCensored = document.getElementById('next-censored');
+        const memoryQuizScreen = document.getElementById('memory-quiz');
+        const shellGameScreen = document.getElementById('shell-game');
 
-        // Configurações do Grid
+        // Configurações do Grid do Jogo
         const ROW = 20;
         const COL = 10;
-        const SQ = 30; // Tamanho do quadrado em pixels
+        const SQ = 30; // Tamanho do quadrado no tabuleiro principal
+        const NEXT_SQ = 18; // Tamanho do quadrado no painel de próxima peça
         
         canvas.width = COL * SQ;
         canvas.height = ROW * SQ;
 
-        // Cores das Peças (Tetrominos)
+        // Cores das Peças: 8 = Seta Invertida, 9 = Pergunta Memória, 10 = Copo Maroto
         const COLORS = [
             null,
-            '#FF0D72', // T
-            '#0DC2FF', // I
-            '#0DFF72', // S
-            '#F538FF', // Z
-            '#FF8E0D', // L
-            '#FFE138', // O
-            '#3877FF'  // J
+            '#FF0D72', // T (1)
+            '#0DC2FF', // I (2)
+            '#0DFF72', // S (3)
+            '#F538FF', // Z (4)
+            '#FF8E0D', // L (5)
+            '#FFE138', // O (6)
+            '#3877FF', // J (7)
+            '#A855F7', // Inversão 1x1 (8)
+            '#06B6D4', // Pergunta Memória 1x1 (9)
+            '#F59E0B'  // Copo Maroto 1x1 (10)
         ];
 
         // Definição das Peças
         function createPiece(type) {
-            if (type === 'I') {
-                return [
-                    [0, 1, 0, 0],
-                    [0, 1, 0, 0],
-                    [0, 1, 0, 0],
-                    [0, 1, 0, 0],
-                ];
-            } else if (type === 'L') {
-                return [
-                    [0, 2, 0],
-                    [0, 2, 0],
-                    [0, 2, 2],
-                ];
-            } else if (type === 'J') {
-                return [
-                    [0, 3, 0],
-                    [0, 3, 0],
-                    [3, 3, 0],
-                ];
-            } else if (type === 'O') {
-                return [
-                    [4, 4],
-                    [4, 4],
-                ];
-            } else if (type === 'Z') {
-                return [
-                    [5, 5, 0],
-                    [0, 5, 5],
-                    [0, 0, 0],
-                ];
-            } else if (type === 'S') {
-                return [
-                    [0, 6, 6],
-                    [6, 6, 0],
-                    [0, 0, 0],
-                ];
-            } else if (type === 'T') {
-                return [
-                    [0, 7, 0],
-                    [7, 7, 7],
-                    [0, 0, 0],
-                ];
+            if (type === 'I') return [[0,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0]];
+            if (type === 'L') return [[0,2,0],[0,2,0],[0,2,2]];
+            if (type === 'J') return [[0,3,0],[0,3,0],[3,3,0]];
+            if (type === 'O') return [[4,4],[4,4]];
+            if (type === 'Z') return [[5,5,0],[0,5,5],[0,0,0]];
+            if (type === 'S') return [[0,6,6],[6,6,0],[0,0,0]];
+            if (type === 'T') return [[0,7,0],[7,7,7],[0,0,0]];
+            if (type === 'SPECIAL') return [[8]];
+            if (type === 'QUESTION') return [[9]];
+            if (type === 'CUP') return [[10]];
+        }
+
+        function getRandomPieceMatrix() {
+            if (currentMode === 'inverted' && Math.random() < 0.25) {
+                return createPiece('SPECIAL');
             }
+            if (currentMode === 'memory' && Math.random() < 0.3) {
+                return Math.random() < 0.5 ? createPiece('QUESTION') : createPiece('CUP');
+            }
+            const pieces = 'ILJOTSZ';
+            return createPiece(pieces[pieces.length * Math.random() | 0]);
+        }
+
+        function getPieceTypeFromMatrix(matrix) {
+            if (!matrix) return 'T';
+            if (matrix.length === 1 && matrix[0].length === 1) {
+                const val = matrix[0][0];
+                if (val === 8) return 'SPECIAL';
+                if (val === 9) return 'QUESTION';
+                if (val === 10) return 'CUP';
+            }
+            const val = matrix.flat().find(v => v !== 0);
+            const mapping = {1:'T', 2:'I', 3:'S', 4:'Z', 5:'L', 6:'O', 7:'J'};
+            return mapping[val] || 'T';
         }
 
         // Arena (Tabuleiro)
@@ -201,40 +296,109 @@
         const player = {
             pos: {x: 0, y: 0},
             matrix: null,
+            nextMatrix: null,
             score: 0,
         };
 
+        // Estado do Jogo e Modos
+        let currentMode = 'classic'; // 'classic', 'speed', 'inverted', 'memory'
+        let gravityDir = 1;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+        let isPaused = true;
+        let isGameOver = false;
+        let gameStarted = false;
+        let animFrameId = null;
+        let isCensored = false;
+        let correctCupIndex = 0;
+
+        // Gestão de Modos
+        function openModeMenu() {
+            if (!isPaused && gameStarted) {
+                togglePause();
+            }
+            modeMenu.classList.remove('hidden');
+        }
+
+        function closeModeMenu() {
+            modeMenu.classList.add('hidden');
+        }
+
+        function selectMode(mode) {
+            currentMode = mode;
+            if (currentMode === 'classic') modeLabel.innerText = 'Modo Clássico';
+            else if (currentMode === 'speed') modeLabel.innerText = 'Modo Veloz (Speed)';
+            else if (currentMode === 'inverted') modeLabel.innerText = 'Modo Invertido 🔄';
+            else if (currentMode === 'memory') modeLabel.innerText = 'Memória & Atenção 🧠';
+
+            closeModeMenu();
+            resetGame();
+        }
+
         // Desenhar a Peça e o Tabuleiro
         function draw() {
-            // Limpar fundo
             context.fillStyle = '#1e293b';
             context.fillRect(0, 0, canvas.width, canvas.height);
 
-            drawMatrix(arena, {x: 0, y: 0});
+            drawMatrix(arena, {x: 0, y: 0}, context, SQ);
             if (player.matrix) {
-                drawMatrix(player.matrix, player.pos);
+                drawMatrix(player.matrix, player.pos, context, SQ);
+            }
+
+            drawNextPiece();
+        }
+
+        function drawNextPiece() {
+            nextContext.fillStyle = '#1e293b';
+            nextContext.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+
+            if (!player.nextMatrix) return;
+
+            if (isCensored) {
+                nextCensored.classList.remove('hidden');
+            } else {
+                nextCensored.classList.add('hidden');
+                const pWidth = player.nextMatrix[0].length * NEXT_SQ;
+                const pHeight = player.nextMatrix.length * NEXT_SQ;
+                const offsetX = (nextCanvas.width - pWidth) / 2 / NEXT_SQ;
+                const offsetY = (nextCanvas.height - pHeight) / 2 / NEXT_SQ;
+
+                drawMatrix(player.nextMatrix, {x: offsetX, y: offsetY}, nextContext, NEXT_SQ);
             }
         }
 
-        function drawMatrix(matrix, offset) {
+        function drawMatrix(matrix, offset, ctx, size) {
             matrix.forEach((row, y) => {
                 row.forEach((value, x) => {
                     if (value !== 0) {
-                        // Sombra/Borda interna
-                        context.fillStyle = COLORS[value];
-                        context.fillRect((x + offset.x) * SQ, (y + offset.y) * SQ, SQ, SQ);
+                        ctx.fillStyle = COLORS[value];
+                        ctx.fillRect((x + offset.x) * size, (y + offset.y) * size, size, size);
                         
-                        // Brilho superior
-                        context.fillStyle = 'rgba(255,255,255,0.2)';
-                        context.fillRect((x + offset.x) * SQ, (y + offset.y) * SQ, SQ, 2);
-                        // Sombra inferior
-                        context.fillStyle = 'rgba(0,0,0,0.2)';
-                        context.fillRect((x + offset.x) * SQ, (y + offset.y) * SQ + SQ - 2, SQ, 2);
+                        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                        ctx.fillRect((x + offset.x) * size, (y + offset.y) * size, size, 2);
                         
-                        // Moldura externa
-                        context.strokeStyle = '#0f172a';
-                        context.lineWidth = 1;
-                        context.strokeRect((x + offset.x) * SQ, (y + offset.y) * SQ, SQ, SQ);
+                        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                        ctx.fillRect((x + offset.x) * size, (y + offset.y) * size + size - 2, size, 2);
+                        
+                        ctx.strokeStyle = '#0f172a';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect((x + offset.x) * size, (y + offset.y) * size, size, size);
+
+                        // Ícones das Peças Especiais
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.font = `${Math.floor(size * 0.75)}px sans-serif`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+
+                        if (value === 8) {
+                            const arrowSymbol = gravityDir === 1 ? '▲' : '▼';
+                            ctx.fillText(arrowSymbol, (x + offset.x + 0.5) * size, (y + offset.y + 0.55) * size);
+                        } else if (value === 9) {
+                            ctx.fillText('?', (x + offset.x + 0.5) * size, (y + offset.y + 0.55) * size);
+                        } else if (value === 10) {
+                            ctx.fillText('🥤', (x + offset.x + 0.5) * size, (y + offset.y + 0.55) * size);
+                        }
                     }
                 });
             });
@@ -256,41 +420,128 @@
 
         // Mesclar peça parada na arena
         function merge(arena, player) {
+            let specialType = null;
             player.matrix.forEach((row, y) => {
                 row.forEach((value, x) => {
                     if (value !== 0) {
                         arena[y + player.pos.y][x + player.pos.x] = value;
+                        if (value === 8) specialType = 'SPECIAL';
+                        if (value === 9) specialType = 'QUESTION';
+                        if (value === 10) specialType = 'CUP';
                     }
                 });
             });
+
+            if (specialType === 'SPECIAL') {
+                gravityDir = -gravityDir;
+            } else if (specialType === 'QUESTION') {
+                triggerMemoryQuiz();
+            } else if (specialType === 'CUP') {
+                triggerShellGame();
+            }
+        }
+
+        // Mini-jogo 1: Pergunta de Memória
+        function triggerMemoryQuiz() {
+            const actualNextType = getPieceTypeFromMatrix(player.nextMatrix);
+            const options = ['I', 'L', 'J', 'O', 'Z', 'S', 'T'];
+            
+            // Garantir que a opção correta está presente nas opções
+            let choices = [actualNextType];
+            while (choices.length < 3) {
+                const rand = options[Math.floor(Math.random() * options.length)];
+                if (!choices.includes(rand)) choices.push(rand);
+            }
+            choices.sort(() => Math.random() - 0.5);
+
+            const quizContainer = document.getElementById('quiz-options');
+            quizContainer.innerHTML = '';
+
+            choices.forEach(type => {
+                const btn = document.createElement('button');
+                btn.className = "bg-slate-800 hover:bg-slate-700 border border-slate-600 p-3 rounded-lg font-bold text-center text-lg transition-all";
+                btn.innerText = type;
+                btn.onclick = () => answerQuiz(type, actualNextType);
+                quizContainer.appendChild(btn);
+            });
+
+            isPaused = true;
+            memoryQuizScreen.classList.remove('hidden');
+        }
+
+        function answerQuiz(selected, correct) {
+            memoryQuizScreen.classList.add('hidden');
+            isCensored = false;
+            drawNextPiece();
+
+            if (selected === correct) {
+                player.score += 50;
+                updateScore();
+            }
+            isPaused = false;
+            lastTime = performance.now();
+            update();
+        }
+
+        // Mini-jogo 2: Copo Maroto
+        function triggerShellGame() {
+            isPaused = true;
+            shellGameScreen.classList.remove('hidden');
+            const resultDiv = document.getElementById('shell-result');
+            resultDiv.innerText = '';
+
+            const cupBtns = document.querySelectorAll('.cup-btn');
+            cupBtns.forEach(btn => btn.classList.add('shuffling'));
+
+            setTimeout(() => {
+                cupBtns.forEach(btn => btn.classList.remove('shuffling'));
+                correctCupIndex = Math.floor(Math.random() * 3);
+            }, 1200);
+        }
+
+        function pickCup(index) {
+            const resultDiv = document.getElementById('shell-result');
+            if (index === correctCupIndex) {
+                resultDiv.innerText = '🎉 ACERTASTE! Todas as linhas limpas!';
+                resultDiv.className = 'text-xs font-bold text-emerald-400';
+                
+                // Limpa todo o tabuleiro como prémio!
+                for (let y = 0; y < arena.length; ++y) {
+                    arena[y].fill(0);
+                }
+                player.score += 100;
+                updateScore();
+            } else {
+                resultDiv.innerText = '❌ FALHASTE! Quase conseguiste!';
+                resultDiv.className = 'text-xs font-bold text-red-400';
+            }
+
+            setTimeout(() => {
+                shellGameScreen.classList.add('hidden');
+                isPaused = false;
+                lastTime = performance.now();
+                update();
+            }, 1500);
         }
 
         // Rodar matriz
         function rotate(matrix, dir) {
             for (let y = 0; y < matrix.length; ++y) {
                 for (let x = 0; x < y; ++x) {
-                    [
-                        matrix[x][y],
-                        matrix[y][x],
-                    ] = [
-                        matrix[y][x],
-                        matrix[x][y],
-                    ];
+                    [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
                 }
             }
-            if (dir > 0) {
-                matrix.forEach(row => row.reverse());
-            } else {
-                matrix.reverse();
-            }
+            if (dir > 0) matrix.forEach(row => row.reverse());
+            else matrix.reverse();
         }
 
         // Lógica de Movimento
         function playerDrop() {
             if (isPaused || isGameOver) return;
-            player.pos.y++;
+            player.pos.y += gravityDir;
+
             if (collide(arena, player)) {
-                player.pos.y--;
+                player.pos.y -= gravityDir;
                 merge(arena, player);
                 playerReset();
                 arenaSweep();
@@ -309,6 +560,8 @@
 
         function playerRotate() {
             if (isPaused || isGameOver) return;
+            if (player.matrix.length === 1) return;
+
             const pos = player.pos.x;
             let offset = 1;
             rotate(player.matrix, 1);
@@ -324,11 +577,27 @@
         }
 
         function playerReset() {
-            const pieces = 'ILJOTSZ';
-            player.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
-            player.pos.y = 0;
-            player.pos.x = (arena[0].length / 2 | 0) -
-                           (player.matrix[0].length / 2 | 0);
+            if (player.nextMatrix === null) {
+                player.nextMatrix = getRandomPieceMatrix();
+            }
+
+            player.matrix = player.nextMatrix;
+            player.nextMatrix = getRandomPieceMatrix();
+
+            // No modo Memória, censurar a caixa da próxima peça por vezes
+            if (currentMode === 'memory') {
+                isCensored = Math.random() < 0.6;
+            } else {
+                isCensored = false;
+            }
+
+            if (gravityDir === 1) {
+                player.pos.y = 0;
+            } else {
+                player.pos.y = ROW - player.matrix.length;
+            }
+
+            player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
             
             if (collide(arena, player)) {
                 gameOver();
@@ -337,18 +606,28 @@
 
         function arenaSweep() {
             let rowCount = 1;
-            outer: for (let y = arena.length - 1; y > 0; --y) {
+            for (let y = arena.length - 1; y >= 0; --y) {
+                let full = true;
                 for (let x = 0; x < arena[y].length; ++x) {
                     if (arena[y][x] === 0) {
-                        continue outer;
+                        full = false;
+                        break;
                     }
                 }
-                const row = arena.splice(y, 1)[0].fill(0);
-                arena.unshift(row);
-                ++y;
 
-                player.score += rowCount * 10;
-                rowCount *= 2;
+                if (full) {
+                    const row = arena.splice(y, 1)[0].fill(0);
+                    if (gravityDir === 1) arena.unshift(row);
+                    else arena.push(row);
+                    y++;
+
+                    player.score += rowCount * 10;
+                    rowCount *= 2;
+
+                    if (currentMode === 'speed' && dropInterval > 150) {
+                        dropInterval -= 25;
+                    }
+                }
             }
         }
 
@@ -375,7 +654,6 @@
 
             if (isPaused) {
                 pauseScreen.classList.remove('hidden');
-                pauseText.innerText = 'Continuar';
                 pauseIcon.innerText = '▶️';
                 if (animFrameId) {
                     cancelAnimationFrame(animFrameId);
@@ -383,7 +661,6 @@
                 }
             } else {
                 pauseScreen.classList.add('hidden');
-                pauseText.innerText = 'Pausar';
                 pauseIcon.innerText = '⏸️';
                 lastTime = performance.now();
                 update();
@@ -391,17 +668,22 @@
         }
 
         function resetGame() {
-            // Limpa completamente a matriz da arena
             for (let y = 0; y < arena.length; ++y) {
                 arena[y].fill(0);
             }
             
             player.score = 0;
+            player.nextMatrix = null;
+            gravityDir = 1;
+            isCensored = false;
             updateScore();
+
             gameOverScreen.classList.add('hidden');
             pauseScreen.classList.add('hidden');
+            modeMenu.classList.add('hidden');
+            memoryQuizScreen.classList.add('hidden');
+            shellGameScreen.classList.add('hidden');
             
-            // Cancela animação anterior para evitar aceleração
             if (animFrameId) {
                 cancelAnimationFrame(animFrameId);
                 animFrameId = null;
@@ -413,8 +695,8 @@
             isPaused = false;
             gameStarted = true;
             
-            pauseText.innerText = 'Pausar';
             pauseIcon.innerText = '⏸️';
+            dropInterval = currentMode === 'speed' ? 600 : 1000;
 
             playerReset();
             draw();
@@ -425,15 +707,6 @@
             startScreen.classList.add('hidden');
             resetGame();
         }
-
-        // Loop do Jogo
-        let dropCounter = 0;
-        let dropInterval = 1000;
-        let lastTime = 0;
-        let isPaused = true;
-        let isGameOver = false;
-        let gameStarted = false;
-        let animFrameId = null;
 
         function update(time = 0) {
             if (isPaused || isGameOver) return;
@@ -452,8 +725,7 @@
 
         // Eventos de Teclado
         document.addEventListener('keydown', event => {
-            // Teclas de Pausa (P ou Espaço)
-            if (event.keyCode === 80 || event.keyCode === 32) { // 80 = P, 32 = Espaço
+            if (event.keyCode === 80 || event.keyCode === 32) { // P ou Espaço
                 event.preventDefault();
                 togglePause();
                 return;
@@ -461,20 +733,13 @@
 
             if (isPaused || isGameOver) return;
             
-            if (event.keyCode === 37) { // Esquerda
-                playerMove(-1);
-            } else if (event.keyCode === 39) { // Direita
-                playerMove(1);
-            } else if (event.keyCode === 40) { // Baixo
-                playerDrop();
-            } else if (event.keyCode === 38) { // Cima (Rodar)
-                playerRotate();
-            }
+            if (event.keyCode === 37) playerMove(-1);
+            else if (event.keyCode === 39) playerMove(1);
+            else if (event.keyCode === 40) playerDrop();
+            else if (event.keyCode === 38) playerRotate();
         });
 
-        // Desenho inicial do tabuleiro vazio
         draw();
-
     </script>
 </body>
 </html>
